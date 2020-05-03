@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using veselov.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace veselov.Controllers
 {
@@ -13,9 +14,9 @@ namespace veselov.Controllers
     [ApiController]
     public class CompaniesController : ControllerBase
     {
-        private readonly CompanyContext _context;
+        private readonly MyContext _context;
 
-        public CompaniesController(CompanyContext context)
+        public CompaniesController(MyContext context)
         {
             _context = context;
         }
@@ -39,6 +40,14 @@ namespace veselov.Controllers
             }
 
             return company;
+        }
+
+        [HttpGet("Big/{h}")]
+        [Authorize]
+        public IEnumerable<Company> GetBigCompanies(int h)
+        {
+            return _context.getBigCompanies(h);
+
         }
 
         // PUT: api/Companies/5
@@ -77,6 +86,7 @@ namespace veselov.Controllers
         // To protect from overposting attacks, please enable the specific properties you want to bind to, for
         // more details see https://aka.ms/RazorPagesCRUD.
         [HttpPost]
+        [Authorize(Roles = "admin")]
         public async Task<ActionResult<Company>> PostCompany(Company company)
         {
             _context.Companies.Add(company);

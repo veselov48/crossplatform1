@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using veselov.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace veselov.Controllers
 {
@@ -13,25 +14,25 @@ namespace veselov.Controllers
     [ApiController]
     public class WorkersController : ControllerBase
     {
-        private readonly WorkerContext _context;
+        private readonly MyContext _context;
 
-        public WorkersController(WorkerContext context)
+        public WorkersController(MyContext context)
         {
             _context = context;
         }
 
         // GET: api/Workers
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Worker>>> GetWorkers()
+        public IEnumerable<Worker> GetWorkers()
         {
-            return await _context.Workers.ToListAsync();
+            return _context.getAllWorkers();
         }
 
         // GET: api/Workers/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Worker>> GetWorker(long id)
         {
-            var worker = await _context.Workers.FindAsync(id);
+            var worker = _context.getWorker(id);
 
             if (worker == null)
             {
@@ -39,6 +40,14 @@ namespace veselov.Controllers
             }
 
             return worker;
+        }
+
+        [HttpGet("Exp/{e}")]
+        [Authorize]
+        public IEnumerable<Worker> GetExpWorkers(int e)
+        {
+            return _context.getExpWorkers(e);
+
         }
 
         // PUT: api/Workers/5
@@ -76,10 +85,18 @@ namespace veselov.Controllers
         // POST: api/Workers
         // To protect from overposting attacks, please enable the specific properties you want to bind to, for
         // more details see https://aka.ms/RazorPagesCRUD.
-        [HttpPost]
-        public async Task<ActionResult<Worker>> PostWorker(Worker worker)
+        [HttpPost("{id}")]
+        [Authorize(Roles = "admin")]
+        public async Task<ActionResult<Worker>> PostWorker(Worker worker, long id)
         {
-            _context.Workers.Add(worker);
+
+            var C = await _context.Companies.FindAsync(id);
+
+            if (C == null)
+                return BadRequest();
+
+            C.Workers.Add(worker);
+
             await _context.SaveChangesAsync();
 
             return CreatedAtAction("GetWorker", new { id = worker.Id }, worker);
@@ -89,13 +106,13 @@ namespace veselov.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult<Worker>> DeleteWorker(long id)
         {
-            var worker = await _context.Workers.FindAsync(id);
+            var worker = _context.getWorker(id);
             if (worker == null)
             {
                 return NotFound();
             }
 
-            _context.Workers.Remove(worker);
+            _context.Companies.Where(C => C.Workers.FirstOrDefault(w => w.Id == id) != null).FirstOrDefault().Workers.Remove(worker);
             await _context.SaveChangesAsync();
 
             return worker;
@@ -103,7 +120,7 @@ namespace veselov.Controllers
 
         private bool WorkerExists(long id)
         {
-            return _context.Workers.Any(e => e.Id == id);
+            return _context.getAllWorkers().Any(e => e.Id == id);
         }
     }
 }
